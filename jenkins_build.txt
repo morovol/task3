@@ -1,0 +1,91 @@
+def TAG_NAME='latest'
+pipeline {
+    // environment{
+    //     TAG_NAME = 'latest'        
+    // }
+    agent { 
+      kubernetes {
+        //inheritFrom 'jenkins-jenkins-agent'      
+        defaultContainer 'my-jenkins-agent'
+        yaml '''
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          labels:
+            some-label: my-jenkins-agent
+        spec:
+          containers:
+          - name: my-jenkins-agent
+            image: morovol/jenkins-agent:v0.1
+            command:
+            - cat
+            tty: true
+            securityContext:
+              privileged: true
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-socket-volume
+          volumes:
+          - name: docker-socket-volume
+            hostPath:
+              path: /var/run/docker.sock
+             
+        '''
+      }        
+    }
+    stages {
+      stage('git') {
+        steps {
+          git branch: 'main', credentialsId: 'git', url: 'https://github.com/morovol/FastApi.git'
+        }
+      }
+      stage('tag') {
+        steps {
+          script {
+            sh 'git config --global --add safe.directory /home/jenkins/agent/workspace/task3'
+            TAG_NAME=sh(returnStdout: true, script:'git log -1 --pretty=format:"%s"').trim()
+            env.TAG_NAME = TAG_NAME
+          }      
+        }
+      }
+      stage('Hadolint') {
+        steps {
+           sh 'hadolint ./Dockerfile | tee -a hadolint_lint.txt'
+        }
+        post {
+           always {
+             archiveArtifacts 'hadolint_lint.txt'
+           }
+        }
+      }
+      stage('build') {
+        steps {
+          script{
+            sh 'echo ${TAG_NAME}${BUILD_ID}'  
+            app = docker.build("morovol/fastapi")  
+            //sh 'docker build -t "morovol/fastapi:${TAG_NAME}${ID_BUID}" .'
+          }
+        }
+      }
+      stage('push_docker') {
+        steps {
+          script{
+            docker.withRegistry('', 'docker') {
+              app.push("${TAG_NAME}${BUILD_ID}")
+            }
+          }
+        }
+      }
+      stage('build_helm') {
+        steps {
+          script{
+            sh 'helm plugin install https://github.com/chartmuseum/helm-push'  
+            sh 'helm repo add chartmuseum http://10.12.10.116:8080'
+            sh 'helm cm-push ./deploy/helm-task --version="${BUILD_ID}" chartmuseum'
+            
+          }
+        }
+      }
+    }
+}
+ 

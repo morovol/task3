@@ -1,0 +1,66 @@
+properties([
+    parameters([
+        choice(
+            choices: ['dev','prod','jenkins'], 
+                name: 'env'
+        )
+    ])
+])    
+
+pipeline {
+    agent { 
+      kubernetes {
+        defaultContainer 'my-jenkins-agent'
+        yaml '''
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          labels:
+            some-label: my-jenkins-agent
+        spec:
+          containers:
+          - name: my-jenkins-agent
+            image: morovol/jenkins-agent:v0.1
+            command:
+            - cat
+            tty: true
+            securityContext:
+              privileged: true
+            volumeMounts:
+            - mountPath: /var/run/docker.sock
+              name: docker-socket-volume
+          volumes:
+          - name: docker-socket-volume
+            hostPath:
+              path: /var/run/docker.sock
+             
+        '''
+      }        
+    }
+    stages {
+      stage('copy_secrets') {
+        steps {
+            script { 
+                sh 'helm repo add chartmuseum http://10.12.10.116:8080'
+                sh 'curl -fsSLo /tmp/kubectl https://dl.k8s.io/release/v1.24.3/bin/linux/amd64/kubectl && \
+                    chmod +x /tmp/kubectl && \
+                    mv /tmp/kubectl /usr/local/bin/kubectl'      
+                sh 'kubectl get secret app-pass -o yaml > ${env}.yaml'
+                sh 'sed -i "s/jenkins/${env}/g" ${env}.yaml'
+                sh 'kubectl -n "${env}" apply -f ${env}.yaml'
+                
+            }    
+        }
+      }
+      stage('deploy') {
+        steps {
+          script {
+              sh 'helm upgrade --install task3 chartmuseum/App-HelmChart --set "namespace=${env}"'
+              
+          }
+        }
+      }  
+      
+    }
+}
+ 
