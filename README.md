@@ -15,3 +15,22 @@
  - add 2 Jenkins secrets (some passwords) for dev and prod  
  - pass different k8s secrets (previously created passwords) depending on same ENV var  
 
+# Implementation 
+1. The task was done in GCP.  
+   gcloud clusters container create task3
+2. kubectl create namespace argocd  
+   kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml  
+   kubectl patch svc argocd-server -n argocd -p '{"spec": {"type": "LoadBalancer"}}'  
+3. kubectl create namwspace jenkins  
+   kubectl apply -f jenkins-app.yaml  
+   kubectl apply -f sa.yaml  
+4. In complect with argo cd
+5. kubectl create namespace dev
+   kubectl create namespace prod
+   jenkinsfile_build of pipeline attached
+   jenkinsfile_deploy
+   kubectl apply -f chartmuseum.yaml
+6. kubectl apply -f app-secrets.yaml
+
+   
+   
