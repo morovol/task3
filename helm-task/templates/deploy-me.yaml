@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-me
+  namespace: {{ .Values.namespace }}
+spec:
+  {{- if (eq .Values.namespace .Values.env.dev) }}
+  replicas: 1
+  {{- else }}
+  replicas: 3
+  {{- end }}
+
+  selector:
+    matchLabels:
+      app: app-me
+  template:
+    metadata:
+      labels:
+        app: app-me
+    spec:
+      containers:
+        - name: mongo-express
+          image: mongo-express
+          env:
+            - name: ME_CONFIG_MONGODB_ADMINUSERNAME
+              value: {{ .Values.user }}
+            - name: ME_CONFIG_MONGODB_ADMINPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-pass
+                  key: key
+            - name: ME_CONFIG_MONGODB_SERVER
+              value: {{ .Values.pathDB }}
+          ports:
+            - containerPort: 8081

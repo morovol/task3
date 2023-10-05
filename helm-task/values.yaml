@@ -1,0 +1,12 @@
+
+
+pathDB: mongodb-deployment-service
+user: admin
+password: ${ME_CONFIG_MONGODB_ADMINPASSWORD}
+
+namespace: jenkins
+countreplic: 1
+
+env:
+  dev: dev
+  prod: prod

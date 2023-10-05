@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: jenkins
+  namespace: argocd
+spec:
+  destination:
+    namespace: jenkins
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    helm:
+      valueFiles:
+      - values.yaml
+      parameters:
+      - name: controller.serviceType
+        value: LoadBalancer
+      - name: volumes.type
+        value: PVC
+      - name: volumes.claimName
+        value: pvc
+      - name: volumes.mountPath
+        value:  ./
+      - name: volumes.readOnly
+        value: "false"
+      - name: rbac.readSecrets
+        value: "true"
+      - name: serviceAccount.name
+        value: jenkins
+    path: charts/jenkins
+    repoURL: https://github.com/jenkinsci/helm-charts.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+ # template:
+ #   spec:
+ #     volumes:
+ #     - name: persistent-storage
+ #       persistentVolumeClaim:
+ #         claimName: pvc

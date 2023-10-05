@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chartmuseum
+  namespace: argocd
+spec:
+  destination:
+    namespace: jenkins
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    helm:
+      valueFiles:
+      - values.yaml
+      parameters:
+      - name: env.open.STORAGE
+        value: google
+      - name: env.open.DISABLE_API
+        value: "false"
+      - name: env.open.STORAGE_GOOGLE_BUCKET
+        value: my-gcs-task
+      - name: env.open.STORAGE_GOOGLE_PREFIX
+        value: chartmuseum
+      - name: gcp.secret.enabled
+        value: "true"
+      - name: gcp.secret.name
+        value: chartmuseum-secret
+      - name: gcp.secret.key
+        value: credentials.json
+
+    path: src/chartmuseum
+    repoURL: https://github.com/chartmuseum/charts.git
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+

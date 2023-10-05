@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: {{ .Values.namespace }}
+spec:
+  {{- if (eq .Values.namespace .Values.env.dev) }}
+  replicas: 1
+  {{- else }}
+  replicas: 3
+  {{- end }}
+  selector:
+    matchLabels:
+      app: app-deploy
+  template:
+    metadata:
+      labels:
+        app: app-deploy
+    spec:
+      containers:
+        - name: app
+          image: morovol/fastapi:latest
+          env:
+            - name: MONGOHOST
+              value: {{ .Values.pathDB }}
+          ports:
+            - containerPort: 8000
+
